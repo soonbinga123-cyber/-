@@ -1,499 +1,442 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Slot Machine - 확률 조정 + 당첨 카운트</title>
-  <style>
-    :root{
-      --bg:#08121a;
-      --card:#0b1720;
-      --accent:#f5c542;
-      --muted:#9aa7b2;
-      --danger:#ffbcbc;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-start;
-      gap:18px;
-      font-family: "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
-      background:linear-gradient(180deg,#07121a 0%, #0f2230 100%);
-      color:#fff;
-      padding:28px;
-    }
-    .card{
-      background:linear-gradient(180deg,var(--card), #071018);
-      padding:18px;
-      border-radius:12px;
-      box-shadow:0 6px 28px rgba(0,0,0,0.6);
-      width:860px;
-      max-width:96%;
-      border:1px solid rgba(255,255,255,0.03);
-    }
-    h1{margin:0 0 8px; font-size:20px}
-    .top-row{display:flex; gap:18px; align-items:flex-start;}
-    #slotCanvas{
-      background:#001217;
-      border-radius:8px;
-      border:4px solid #000;
-      width:600px;
-      height:200px;
-      display:block;
-    }
-    .controls{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      margin-top:8px;
-      flex-wrap:wrap;
-    }
-    button{
-      background:var(--accent);
-      color:#111;
-      border:none;
-      padding:10px 14px;
-      border-radius:8px;
-      font-weight:700;
-      cursor:pointer;
-      box-shadow:0 4px 8px rgba(0,0,0,0.4);
-    }
-    button:disabled{opacity:0.5; cursor:not-allowed}
-    .info{color:var(--muted); font-size:13px}
-    .sidebar{width:220px;}
-    .prob-row{display:flex; gap:8px; align-items:center; margin-bottom:8px}
-    .prob-row input[type="number"]{width:60px; padding:6px; border-radius:6px; border:1px solid #333; background:#07131a; color:#fff}
-    .prob-row input[type="range"]{flex:1}
-    .prob-label{width:36px; text-align:center}
-    .stats{margin-top:12px; font-size:14px; color:var(--muted)}
-    .small{font-size:12px; color:#9aa7b2; margin-top:6px}
-    /* modal overlay */
-    .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:999}
-    .overlay.active{display:flex}
-    .modal{background:#fff; color:#111; width:520px; border-radius:10px; padding:18px; text-align:center}
-    .danger{background:var(--danger); padding:10px; border-radius:8px; color:#8a1212; font-weight:700; margin:8px 0}
-    input[type="password"]{padding:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; width:160px}
-    .flex-col{display:flex; flex-direction:column; gap:8px}
-    .footer{margin-top:12px; font-size:13px; color:var(--muted)}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>슬롯머신</title>
+<style>
+  :root{
+    --bg1:#0b1020;
+    --bg2:#25163a;
+    --neon1:#ff3d81;
+    --neon2:#00e5ff;
+    --panel:#0e0f1a;
+    --accent:#ffd166;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: "Noto Sans KR", Arial, sans-serif;
+    background: linear-gradient(135deg,var(--bg1),var(--bg2));
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* Slot-machine style striped background */
+  .bg-stripes {
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(45deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+    background-size: 6px 6px, 40px 40px;
+    z-index:0;
+  }
+
+  .container{
+    position:relative;
+    z-index:1;
+    max-width:900px;
+    margin:40px auto;
+    padding:20px;
+    text-align:center;
+  }
+
+  h1{
+    margin:8px 0 16px;
+    font-size:28px;
+    letter-spacing:1px;
+    color:var(--accent);
+    text-shadow:0 0 12px rgba(255,209,102,0.12);
+  }
+
+  /* Slot cabinet */
+  .machine {
+    margin:0 auto;
+    width:640px;
+    max-width:95%;
+    background: linear-gradient(180deg,#1b1228,#0f0b14);
+    border-radius:16px;
+    padding:22px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4) inset;
+    border:4px solid rgba(255,255,255,0.03);
+  }
+
+  .reels {
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    padding:20px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border-radius:12px;
+  }
+
+  .reel {
+    flex:1;
+    background:linear-gradient(180deg,#0e1420,#061018);
+    border-radius:10px;
+    padding:16px;
+    height:160px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:48px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    color:#fff;
+    letter-spacing:6px;
+    user-select:none;
+  }
+
+  .controls{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  button {
+    padding:10px 16px;
+    border-radius:8px;
+    border:0;
+    background:linear-gradient(90deg,var(--neon1),var(--neon2));
+    color:#081225;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  }
+
+  button.secondary{
+    background:linear-gradient(90deg,#44485a,#2a2e3a);
+    color:#fff;
+  }
+
+  .status{
+    color:#ddd;
+    font-size:14px;
+    margin-left:8px;
+  }
+
+  .play-count{
+    margin-top:12px;
+    color:#ffd;
+  }
+
+  /* modal overlay */
+  .overlay {
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.75));
+    z-index:10;
+  }
+  .overlay.active{ display:flex; }
+
+  .modal {
+    width:380px;
+    max-width:90%;
+    background:linear-gradient(180deg,#111018,#171423);
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0 12px 40px rgba(0,0,0,0.7);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  .modal h2{ margin:0 0 8px; color:#ffb3b3; }
+  .modal p{ margin:0 0 12px; color:#ffdede; font-size:14px; }
+
+  input[type="password"]{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:0;
+    margin-bottom:10px;
+    box-sizing:border-box;
+    font-size:16px;
+  }
+
+  .note{
+    margin-top:10px;
+    font-size:12px;
+    color:#cfcfcf;
+  }
+
+  footer{
+    margin-top:18px;
+    font-size:13px;
+    color:#cfcfcf;
+  }
+
+  /* small screens tweak */
+  @media (max-width:640px){
+    .reel{ font-size:36px; height:120px; }
+    .machine{ padding:14px; }
+  }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎰 슬롯머신 — 확률 조정 & 당첨 카운트</h1>
-    <div class="top-row">
-      <div>
-        <canvas id="slotCanvas" width="600" height="200"></canvas>
+  <div class="bg-stripes"></div>
 
-        <div class="controls">
-          <button id="spinBtn">Spin</button>
-          <button id="resetCountBtn" title="스핀 카운트 초기화">Reset Count</button>
-          <div class="info" id="countInfo">연속 스핀: 0</div>
-        </div>
+  <div class="container">
+    <h1>슬롯머신</h1>
 
-        <div class="footer small">스페이스바로도 스핀할 수 있습니다.</div>
+    <div class="machine" role="application" aria-label="slot machine">
+      <div class="reels" id="reels">
+        <div class="reel" id="r1">🍒</div>
+        <div class="reel" id="r2">🍋</div>
+        <div class="reel" id="r3">🍊</div>
       </div>
 
-      <div class="sidebar">
-        <div style="font-weight:700; margin-bottom:8px">심볼 확률 조정</div>
-
-        <div id="probList"></div>
-
-        <div style="display:flex; gap:8px; margin-top:10px;">
-          <button id="normalizeBtn">정규화 (자동)</button>
-          <button id="randomizeBtn">랜덤 초기화</button>
-        </div>
-
-        <div class="stats">
-          <div>총 스핀: <span id="totalSpins">0</span></div>
-          <div>잭팟(모두 동일) 횟수: <span id="jackpotCount">0</span></div>
-          <div>현재 확률 합계: <span id="probSum">0</span></div>
-        </div>
-
-        <div class="small">각 심볼에 0 이상의 가중치 입력 (0 가능). 비율은 자동으로 계산되어 적용됩니다.</div>
+      <div class="controls">
+        <button id="connectBtn">Arduino 연결</button>
+        <button id="spinBtn">Spin</button>
+        <button id="unlockBtn" class="secondary" style="display:none">잠금 해제</button>
+        <div class="status" id="status">상태: 미연결</div>
       </div>
-    </div>
 
-    <div class="small" style="margin-top:12px;">
-      연속으로 3번 스핀하면 게임이 잠기고 "도박은 위험하다"가 표시됩니다. 잠김 해제는 비밀번호 필요 (기본 비밀번호: <strong>0000</strong>).
+      <div class="play-count" id="playCount">플레이 횟수: 0</div>
+
     </div>
   </div>
 
-  <!-- 잠금 모달 -->
+  <!-- modal: 경고 + 비밀번호 -->
   <div class="overlay" id="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h2 id="modalTitle">도박은 위험합니다</h2>
-      <div class="danger">도박은 위험하다</div>
-      <div>계속하려면 비밀번호를 입력하세요.</div>
-      <div style="margin-top:10px;">
-        <input id="pwInput" type="password" placeholder="비밀번호 입력" />
-        <button id="unlockBtn">확인</button>
+    <div class="modal">
+      <h2>도박은 위험합니다</h2>
+      <p>3번 플레이하셨습니다. 계속하려면 비밀번호를 입력하세요.</p>
+      <input id="pwdInput" type="password" placeholder="비밀번호 입력" />
+      <div style="display:flex; gap:8px;">
+        <button id="pwdOk">확인</button>
+        <button id="pwdCancel" class="secondary">취소</button>
       </div>
-      <div class="small" style="margin-top:8px;">기본 비밀번호는 코드 상단의 UNLOCK_PASSWORD 값입니다.</div>
     </div>
   </div>
 
-  <script>
-    /*****************************************
-     * 슬롯머신: 확률(가중치) 조정 + 당첨 카운트
-     *****************************************/
-    const UNLOCK_PASSWORD = "0000"; // 필요시 변경
+<script>
+/*
+  slot.html
+  - Web Serial API로 아두이노와 통신 (읽기 전용 예)
+  - 아두이노가 "pressed" 라인을 전송하면 startSlotMachine() 호출
+  - 3번 플레이 이후 잠금 -> 비밀번호 입력 필요
+  - 기본 패스워드: 1234 (아래 PASSWORD 변수 수정해서 바꿀 것)
+*/
 
-    // 심볼 & 초기 가중치
-    const symbols = ["🍒","🔔","💎","🍋","7️⃣","⭐"];
-    // 기본 가중치 (모두 동일)
-    let weights = Array(symbols.length).fill(1);
+/* ========== 설정 ========== */
+const BAUD_RATE = 9600;
+const PASSWORD = "1336"; // <--- 여기서 비밀번호 변경하세요
+const MAX_PLAYS_BEFORE_LOCK = 3;
 
-    // 상태 변수
-    let totalSpins = 0;
-    let jackpotCount = 0;
-    let consecutiveSpins = 0;
-    let locked = false;
+/* ========== UI 요소 ========== */
+const connectBtn = document.getElementById('connectBtn');
+const spinBtn = document.getElementById('spinBtn');
+const unlockBtn = document.getElementById('unlockBtn');
+const statusEl = document.getElementById('status');
+const playCountEl = document.getElementById('playCount');
+const overlay = document.getElementById('overlay');
+const pwdInput = document.getElementById('pwdInput');
+const pwdOk = document.getElementById('pwdOk');
+const pwdCancel = document.getElementById('pwdCancel');
 
-    // Canvas
-    const canvas = document.getElementById("slotCanvas");
-    const ctx = canvas.getContext("2d");
-    const numSlots = 3;
-    const slotWidth = canvas.width / numSlots;
-    let slotPositions = [0,0,0];
-    let spinning = [false,false,false];
-    let spinStartTime = [0,0,0];
-    let targetResult = [0,0,0];
+const reels = [
+  document.getElementById('r1'),
+  document.getElementById('r2'),
+  document.getElementById('r3')
+];
 
-    // UI 요소
-    const spinBtn = document.getElementById("spinBtn");
-    const resetCountBtn = document.getElementById("resetCountBtn");
-    const countInfo = document.getElementById("countInfo");
-    const probListDiv = document.getElementById("probList");
-    const normalizeBtn = document.getElementById("normalizeBtn");
-    const randomizeBtn = document.getElementById("randomizeBtn");
-    const totalSpinsEl = document.getElementById("totalSpins");
-    const jackpotCountEl = document.getElementById("jackpotCount");
-    const probSumEl = document.getElementById("probSum");
+let playCount = 0;
+let locked = false;
 
-    // modal
-    const overlay = document.getElementById("overlay");
-    const pwInput = document.getElementById("pwInput");
-    const unlockBtn = document.getElementById("unlockBtn");
+/* ========== Serial 관련 변수 ========== */
+let port = null;
+let reader = null;
+let keepReading = false;
 
-    // --- 그리기 ---
-    function drawSlots(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "#04121a";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
+/* ========== 슬롯머신 심볼 & 로직 ========== */
+const SYMBOLS = ["🍒","🍋","🍊","🍉","⭐","🔔","7️⃣","🍇"];
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = "80px serif";
+function randSymbol(){ return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]; }
 
-      for(let i=0;i<numSlots;i++){
-        const xCenter = i*slotWidth + slotWidth/2;
-        const yCenter = canvas.height/2;
-        let idx = ((Math.floor(slotPositions[i]) % symbols.length) + symbols.length) % symbols.length;
-        ctx.fillStyle = "#fff";
-        ctx.fillText(symbols[idx], xCenter, yCenter);
+function updatePlayCount(){
+  playCountEl.textContent = `플레이 횟수: ${playCount}`;
+  if(playCount >= MAX_PLAYS_BEFORE_LOCK){
+    locked = true;
+    unlockBtn.style.display = 'inline-block';
+  }
+}
+
+/* 슬롯 애니메이션: 각 릴을 일정 시간 랜덤으로 바꾼 뒤 정지 */
+function startSlotMachine(){
+  if(locked){
+    // 락 상태면 오버레이 띄우기
+    showLockModal();
+    return;
+  }
+
+  // Disable buttons briefly to prevent 중복 호출
+  spinBtn.disabled = true;
+  connectBtn.disabled = true;
+
+  // spin animation
+  const durations = [900, 1200, 1500]; // 각 릴의 회전 시간 (ms)
+  const intervals = [];
+
+  for(let i=0;i<3;i++){
+    let t = 0;
+    intervals[i] = setInterval(()=>{
+      reels[i].textContent = randSymbol();
+      t += 80;
+    }, 80);
+  }
+
+  // 정지 타이머 설정
+  for(let i=0;i<3;i++){
+    setTimeout(()=>{
+      clearInterval(intervals[i]);
+      // 최종 심볼 랜덤 지정
+      reels[i].textContent = randSymbol();
+      // 마지막 릴이면 풀기
+      if(i===2){
+        spinBtn.disabled = false;
+        connectBtn.disabled = false;
+        playCount++;
+        updatePlayCount();
+        if(locked) showLockModal();
       }
-    }
+    }, durations[i]);
+  }
+}
 
-    // --- 애니메이션 ---
-    function animate(){
-      let anySpinning = false;
-      for(let i=0;i<numSlots;i++){
-        if(spinning[i]){
-          anySpinning = true;
-          const elapsed = Date.now() - spinStartTime[i];
-          const duration = 1600 + i*450;
-          if(elapsed < duration){
-            slotPositions[i] += 0.4 + (1 - elapsed/duration) * 7;
-          } else {
-            spinning[i] = false;
-            slotPositions[i] = targetResult[i];
-          }
+/* ========== Lock modal control ========== */
+function showLockModal(){
+  overlay.classList.add('active');
+  pwdInput.value = '';
+  pwdInput.focus();
+}
+
+function hideLockModal(){
+  overlay.classList.remove('active');
+}
+
+/* unlock flow */
+pwdOk.addEventListener('click', ()=>{
+  const v = pwdInput.value;
+  if(v === PASSWORD){
+    // unlock: reset playCount and locked
+    playCount = 0;
+    locked = false;
+    updatePlayCount();
+    hideLockModal();
+    alert('잠금 해제되었습니다. 안전한 이용 부탁드립니다.');
+  } else {
+    alert('비밀번호가 틀렸습니다.');
+  }
+});
+
+pwdCancel.addEventListener('click', ()=>{
+  hideLockModal();
+});
+
+/* unlockBtn (화면의 잠금해제 버튼) */
+unlockBtn.addEventListener('click', showLockModal);
+
+/* ========== Web Serial API 연결 ========== */
+async function connectSerial(){
+  if(!('serial' in navigator)){
+    statusEl.textContent = '상태: Web Serial API를 지원하지 않는 브라우저입니다.';
+    return;
+  }
+
+  try {
+    // 포트 요청
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: BAUD_RATE });
+    statusEl.textContent = `상태: 연결됨 (baud ${BAUD_RATE})`;
+    connectBtn.textContent = '연결 해제';
+    keepReading = true;
+
+    // TextDecoderStream으로 읽기
+    const decoder = new TextDecoderStream();
+    port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+
+    readLoop();
+  } catch (err) {
+    console.error('시리얼 연결 실패:', err);
+    statusEl.textContent = '상태: 연결 실패';
+  }
+}
+
+async function disconnectSerial(){
+  keepReading = false;
+  try {
+    if(reader){
+      await reader.cancel();
+      reader.releaseLock();
+      reader = null;
+    }
+    if(port){
+      await port.close();
+      port = null;
+    }
+    statusEl.textContent = '상태: 연결 해제됨';
+    connectBtn.textContent = 'Arduino 연결';
+  } catch(err){
+    console.error('연결 해제 중 오류:', err);
+  }
+}
+
+async function readLoop(){
+  try {
+    while(keepReading && reader){
+      const { value, done } = await reader.read();
+      if(done) break;
+      if(value){
+        // value는 시리얼로 들어온 텍스트 (줄바꿈 포함 가능)
+        console.log('recv:', value);
+        // 간단 파싱: "pressed" 포함되면 스핀
+        const cleanValue = value.trim().toLowerCase();
+        if(cleanValue == "1"){
+          console.log("아두이노 신호 감지됨 → 슬롯머신 작동");
+          setTimeout(() => {
+            startSlotMachine();
+          }, 0); 
+          
         }
       }
-
-      drawSlots();
-
-      if(anySpinning){
-        requestAnimationFrame(animate);
-      } else {
-        // 멈춘 후 체크
-        handleSpinEnd();
-      }
     }
+  } catch(err){
+    console.error('readLoop error:', err);
+    statusEl.textContent = '상태: 읽기 오류';
+  }
+}
 
-    function handleSpinEnd(){
-      // 스핀 카운트 증가(총 스핀)
-      totalSpins++;
-      totalSpinsEl.textContent = totalSpins;
+/* connectBtn 토글 */
+connectBtn.addEventListener('click', async ()=>{
+  if(port){
+    await disconnectSerial();
+  } else {
+    await connectSerial();
+  }
+});
 
-      // 당첨 체크 (모두 동일)
-      if(targetResult[0] === targetResult[1] && targetResult[1] === targetResult[2]){
-        jackpotCount++;
-        jackpotCountEl.textContent = jackpotCount;
-        setTimeout(()=> alert("🎉 Jackpot!"), 60);
-      }
-    }
+/* spin test button (개발/테스트용) */
+spinBtn.addEventListener('click', ()=>{
+  startSlotMachine();
+});
 
-    // --- 확률(가중치)에 따른 랜덤 선택 ---
-    function weightedRandomIndex(){
-      const sum = weights.reduce((a,b)=> a + b, 0);
-      if(sum <= 0){
-        // 모든 가중치가 0이면 균등 선택
-        return Math.floor(Math.random() * weights.length);
-      }
-      const r = Math.random() * sum;
-      let acc = 0;
-      for(let i=0;i<weights.length;i++){
-        acc += weights[i];
-        if(r < acc) return i;
-      }
-      // 안전장치
-      return weights.length - 1;
-    }
+/* init */
+updatePlayCount();
 
-    function getRandomResult(){
-      // 각 릴 독립적으로 가중치에 따라 선택
-      return [
-        weightedRandomIndex(),
-        weightedRandomIndex(),
-        weightedRandomIndex()
-      ];
-    }
-
-    // --- 스핀 시작 ---
-    function startSpinFromUser(){
-      if(locked) return;
-
-      targetResult = getRandomResult();
-      for(let i=0;i<numSlots;i++){
-        spinning[i] = true;
-        spinStartTime[i] = Date.now() + i*50;
-      }
-      animate();
-
-      consecutiveSpins++;
-      updateCountInfo();
-      if(consecutiveSpins >= 3){
-        lockGame();
-      }
-    }
-
-    function updateCountInfo(){
-      countInfo.textContent = `연속 스핀: ${consecutiveSpins}`;
-    }
-
-    function lockGame(){
-      locked = true;
-      spinBtn.disabled = true;
-      showLockModal();
-    }
-
-    function unlockGame(){
-      locked = false;
-      consecutiveSpins = 0;
-      updateCountInfo();
-      spinBtn.disabled = false;
-      hideLockModal();
-      pwInput.value = "";
-    }
-
-    // --- UI: 확률 컨트롤 생성 ---
-    function renderProbControls(){
-      probListDiv.innerHTML = "";
-      for(let i=0;i<symbols.length;i++){
-        const row = document.createElement("div");
-        row.className = "prob-row";
-
-        const label = document.createElement("div");
-        label.className = "prob-label";
-        label.textContent = symbols[i];
-
-        const range = document.createElement("input");
-        range.type = "range";
-        range.min = 0;
-        range.max = 100;
-        range.step = 1;
-        range.value = weights[i] * 10; // 내부적으로 표시용
-        range.dataset.index = i;
-
-        const num = document.createElement("input");
-        num.type = "number";
-        num.min = 0;
-        num.step = 1;
-        num.value = weights[i];
-
-        const pct = document.createElement("div");
-        pct.style.width = "56px";
-        pct.style.textAlign = "right";
-        pct.style.fontSize = "13px";
-        pct.style.color = "var(--muted)";
-
-        // 동기화
-        function syncFromRange(){
-          const idx = Number(range.dataset.index);
-          const val = Math.max(0, Number(range.value));
-          // range는 0..100 -> 가중치로 변환 (여기선 0..10)
-          const w = Math.round(val / 10);
-          weights[idx] = w;
-          num.value = w;
-          updateProbDisplay();
-        }
-        function syncFromNum(){
-          const idx = Number(range.dataset.index);
-          let val = Number(num.value);
-          if(isNaN(val) || val < 0) val = 0;
-          weights[idx] = Math.round(val);
-          range.value = weights[idx] * 10;
-          updateProbDisplay();
-        }
-
-        range.addEventListener("input", syncFromRange);
-        num.addEventListener("change", syncFromNum);
-
-        row.appendChild(label);
-        row.appendChild(range);
-        row.appendChild(num);
-        row.appendChild(pct);
-
-        probListDiv.appendChild(row);
-      }
-
-      updateProbDisplay();
-    }
-
-    function updateProbDisplay(){
-      const sum = weights.reduce((a,b)=> a + b, 0);
-      probSumEl.textContent = sum.toFixed(0);
-
-      // update each pct text (iterate children)
-      const rows = probListDiv.querySelectorAll(".prob-row");
-      rows.forEach((row, idx) => {
-        const pctDiv = row.querySelector("div:last-child");
-        let p = 0;
-        if(sum > 0) p = (weights[idx] / sum) * 100;
-        pctDiv.textContent = p.toFixed(1) + "%";
-      });
-    }
-
-    // 정규화(자동): 가중치들을 합이 100이 되게 재스케일 - 여기서는 내부 정수 가중치로 유지
-    function normalizeWeights(){
-      const sum = weights.reduce((a,b)=> a + b, 0);
-      if(sum <= 0){
-        // 전부 0이면 균등 가중치 1로 변경
-        weights = Array(weights.length).fill(1);
-      } else {
-        // 비율 유지하되 최소 1로 보정하여 정수화
-        // 목표: 가중치들을 소수로 유지하는 대신 간단히 비율을 보정
-        const normalized = weights.map(w => w / sum);
-        // 스케일하여 정수로 만들기 (총합 100 -> 가시적으로 보기 좋음)
-        const scaled = normalized.map(v => Math.max(0, Math.round(v * 100)));
-        // 보정: 합이 0 또는 !=100 이면 마지막 심볼에 나머지 추가
-        let s = scaled.reduce((a,b)=>a+b,0);
-        if(s === 0){
-          for(let i=0;i<scaled.length;i++) scaled[i] = 1;
-          s = scaled.reduce((a,b)=>a+b,0);
-        }
-        if(s !== 100){
-          scaled[scaled.length - 1] += (100 - s);
-        }
-        // 내부 가중치는 scaled/10 (가독성), 최소 0
-        weights = scaled.map(v => Math.max(0, Math.round(v/10)));
-        // 보정: 만약 모두 0이면 1로
-        if(weights.every(w => w === 0)){
-          weights = Array(weights.length).fill(1);
-        }
-      }
-      renderProbControls();
-    }
-
-    function randomizeWeights(){
-      for(let i=0;i<weights.length;i++){
-        weights[i] = Math.floor(Math.random() * 6); // 0..5
-      }
-      // 보정: 모두 0이면 1
-      if(weights.every(w => w === 0)) weights[0] = 1;
-      renderProbControls();
-    }
-
-    // --- 이벤트 바인딩 ---
-    spinBtn.addEventListener("click", () => {
-      startSpinFromUser();
-    });
-    resetCountBtn.addEventListener("click", () => {
-      consecutiveSpins = 0;
-      locked = false;
-      spinBtn.disabled = false;
-      updateCountInfo();
-      hideLockModal();
-    });
-
-    normalizeBtn.addEventListener("click", normalizeWeights);
-    randomizeBtn.addEventListener("click", randomizeWeights);
-
-    // modal actions
-    function showLockModal(){
-      overlay.classList.add("active");
-      setTimeout(()=> pwInput.focus(), 200);
-    }
-    function hideLockModal(){
-      overlay.classList.remove("active");
-    }
-
-    unlockBtn.addEventListener("click", ()=>{
-      const v = pwInput.value;
-      if(v === UNLOCK_PASSWORD){
-        unlockGame();
-      } else {
-        pwInput.style.animation = "shake 300ms";
-        setTimeout(()=> pwInput.style.animation = "", 300);
-      }
-    });
-    pwInput.addEventListener("keydown", (e)=>{
-      if(e.key === "Enter") unlockBtn.click();
-    });
-
-    // 스페이스로 스핀
-    window.addEventListener("keydown", (e)=>{
-      if(e.code === "Space"){
-        e.preventDefault();
-        spinBtn.click();
-      }
-    });
-
-    // CSS 애니메이션(흔들림)
-    const styleEl = document.createElement("style");
-    styleEl.textContent = `
-      @keyframes shake {
-        0% { transform: translateX(0); }
-        25% { transform: translateX(-6px); }
-        50% { transform: translateX(6px); }
-        75% { transform: translateX(-4px); }
-        100% { transform: translateX(0); }
-      }
-    `;
-    document.head.appendChild(styleEl);
-
-    // 초기 렌더링
-    function init(){
-      renderProbControls();
-      drawSlots();
-      updateCountInfo();
-      totalSpinsEl.textContent = totalSpins;
-      jackpotCountEl.textContent = jackpotCount;
-      updateProbDisplay();
-    }
-
-    init();
-
-    // Expose some functions for debugging in console (선택)
-    window._slot = {
-      weights, getRandomResult, startSpinFromUser, normalizeWeights, randomizeWeights
-    };
-
-  </script>
+/* 안전 메세지: 페이지를 바로 닫지 못하게 하는 간단한 안내 */
+window.addEventListener('beforeunload', (e) => {
+  // 사용자 확인 대화상자 노출은 브라우저 정책에 따라 다름
+  // e.preventDefault();
+});
+</script>
 </body>
 </html>
+
